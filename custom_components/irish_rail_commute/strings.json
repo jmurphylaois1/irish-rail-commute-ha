@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose route",
+        "description": "Select your Irish Rail commute route.",
+        "data": {
+          "origin": "Origin station",
+          "destination": "Destination station"
+        }
+      },
+      "settings": {
+        "title": "Commute settings",
+        "description": "Choose a name and how many upcoming services to track.",
+        "data": {
+          "commute_name": "Commute name",
+          "time_window": "Time window (minutes)",
+          "num_services": "Number of services",
+          "night_updates": "Enable night updates"
+        }
+      }
+    },
+    "error": {
+      "same_station": "Origin and destination stations must be different.",
+      "invalid_time_window": "Time window must be at least 1 minute.",
+      "invalid_num_services": "Number of services must be at least 1."
+    },
+    "abort": {
+      "already_configured": "This route is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Commute settings",
+        "description": "Update your Irish Rail commute settings.",
+        "data": {
+          "commute_name": "Commute name",
+          "time_window": "Time window (minutes)",
+          "num_services": "Number of services",
+          "night_updates": "Enable night updates"
+        }
+      }
+    },
+    "error": {
+      "invalid_time_window": "Time window must be at least 1 minute.",
+      "invalid_num_services": "Number of services must be at least 1."
+    }
+  }
+}
