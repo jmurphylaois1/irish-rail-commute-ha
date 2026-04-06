@@ -61,3 +61,15 @@ PEAK_HOURS: Final = [
 UPDATE_INTERVAL_NIGHT: Final = timedelta(minutes=15)
 UPDATE_INTERVAL_OFF_PEAK: Final = timedelta(minutes=5)
 UPDATE_INTERVAL_PEAK: Final = timedelta(minutes=2)
+
+# ---------------------------
+# Flags / favourites storage
+# ---------------------------
+EVENT_FLAGS_UPDATED: Final = f"{DOMAIN}_flags_updated"
+FLAGS_STORAGE_KEY_PREFIX: Final = f"{DOMAIN}_flags_"
+FLAGS_STORAGE_VERSION: Final = 1
+HELPER_FAVOURITES_PREFIX: Final = "rail_commute_favourites_"
+HELPER_FLAGGED_PREFIX: Final = "rail_commute_flagged_"
+HELPER_MAX_LENGTH: Final = 255
+STORE_KEY_FAVOURITES: Final = "favourites"
+STORE_KEY_FLAGGED: Final = "flagged"
