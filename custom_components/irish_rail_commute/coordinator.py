@@ -892,6 +892,13 @@ class IrishRailDataUpdateCoordinator(DataUpdateCoordinator):
 
             parsed_data = self._parse_data(data)
             self._failed_updates = 0
+
+            # Record reliability observations (must be awaited — lives here, not in _parse_data)
+            if self.reliability_tracker is not None:
+                await self.reliability_tracker.async_record(
+                    parsed_data.get("services", [])
+                )
+
             return parsed_data
 
         except Exception as err:
@@ -1082,10 +1089,6 @@ class IrishRailDataUpdateCoordinator(DataUpdateCoordinator):
                 },
             )
         self._previous_status = overall_status
-
-        # Record reliability observations for tracked services
-        if self.reliability_tracker is not None:
-            await self.reliability_tracker.async_record(services)
 
         next_train = None
         for service in upcoming_trains:
