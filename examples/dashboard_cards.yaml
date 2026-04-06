@@ -1,0 +1,50 @@
+# Irish Rail Commute — Dashboard Card Examples
+#
+# Prerequisites:
+#   1. Copy www/irish-rail-commute-card.js to your HA config/www/ directory
+#   2. Add the JS resource in HA:
+#      Settings → Dashboards → Resources → Add resource
+#      URL: /local/irish-rail-commute-card.js
+#      Type: JavaScript module
+#   3. Replace sensor.irish_rail_commute_summary with your actual entity ID.
+#      If you named your commute "Dublin Commute", the entity will be:
+#      sensor.dublin_commute_summary
+#
+# To add a card in Home Assistant:
+#   Dashboard → Edit → Add Card → Manual → paste the YAML below
+
+# ─────────────────────────────────────────
+# 1. Full commute card (recommended)
+#    Shows upcoming services, delay status,
+#    travel recommendation, and timeline view.
+# ─────────────────────────────────────────
+type: custom:irish-rail-commute-card
+entity: sensor.irish_rail_commute_summary
+show_last_updated: true
+show_day_view: true
+show_recommendation: true
+show_compact_times: true
+
+---
+
+# ─────────────────────────────────────────
+# 2. Minimal card
+#    Just the next trains, no extras.
+# ─────────────────────────────────────────
+type: custom:irish-rail-commute-card
+entity: sensor.irish_rail_commute_summary
+show_last_updated: false
+show_day_view: false
+show_recommendation: false
+show_compact_times: true
+
+---
+
+# ─────────────────────────────────────────
+# 3. Status entity card
+#    Quick glance at current commute status.
+# ─────────────────────────────────────────
+type: entity
+entity: sensor.irish_rail_commute_summary
+name: Commute Status
+icon: mdi:train
