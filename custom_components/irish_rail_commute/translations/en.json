@@ -16,14 +16,18 @@
           "commute_name": "Commute name",
           "time_window": "Time window (minutes)",
           "num_services": "Number of services",
-          "night_updates": "Enable night updates"
+          "night_updates": "Enable night updates",
+          "severe_delay_threshold": "Severe disruption threshold (minutes)",
+          "major_delay_threshold": "Major delay threshold (minutes)",
+          "minor_delay_threshold": "Minor delay threshold (minutes)"
         }
       }
     },
     "error": {
       "same_station": "Origin and destination stations must be different.",
       "invalid_time_window": "Time window must be at least 1 minute.",
-      "invalid_num_services": "Number of services must be at least 1."
+      "invalid_num_services": "Number of services must be at least 1.",
+      "invalid_delay_thresholds": "Delay thresholds must satisfy: severe ≥ major ≥ minor ≥ 0."
     },
     "abort": {
       "already_configured": "This route is already configured."
@@ -38,13 +42,17 @@
           "commute_name": "Commute name",
           "time_window": "Time window (minutes)",
           "num_services": "Number of services",
-          "night_updates": "Enable night updates"
+          "night_updates": "Enable night updates",
+          "severe_delay_threshold": "Severe disruption threshold (minutes)",
+          "major_delay_threshold": "Major delay threshold (minutes)",
+          "minor_delay_threshold": "Minor delay threshold (minutes)"
         }
       }
     },
     "error": {
       "invalid_time_window": "Time window must be at least 1 minute.",
-      "invalid_num_services": "Number of services must be at least 1."
+      "invalid_num_services": "Number of services must be at least 1.",
+      "invalid_delay_thresholds": "Delay thresholds must satisfy: severe ≥ major ≥ minor ≥ 0."
     }
   }
 }

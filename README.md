@@ -32,7 +32,10 @@ Data is live (not delayed) and reflects current train status from Irish Rail.
   - Every 15 minutes overnight (00:00–05:00) when night updates are enabled
   - Night update mode: disable overnight polling entirely to avoid unnecessary API calls
 - Custom Lovelace card with timeline UI, delay indicators, and travel recommendations
-- Multiple routes supported — add the integration multiple times for each commute
+- Multiple routes supported — add the integration multiple times for each commute, including duplicate origin/destination pairs with different names
+- Status change events — fire a Home Assistant event when the commute status changes, usable in automations
+- Automation blueprint — built-in blueprint for push notifications on status changes
+- 7-day reliability sensor — tracks the percentage of trains that ran on time over the past 7 days
 
 ---
 
@@ -64,8 +67,11 @@ Data is live (not delayed) and reflects current train status from Irish Rail.
    - **Time window (minutes)** — how many minutes ahead to look for services (15–180, default 60)
    - **Number of services** — how many upcoming trains to track (1–10, default 3)
    - **Enable night updates** — if disabled, polling pauses between midnight and 05:00
+   - **Severe disruption threshold** — delay in minutes that triggers "Severe Disruption" status (default 30)
+   - **Major delay threshold** — delay in minutes that triggers "Major Delays" status (default 15)
+   - **Minor delay threshold** — delay in minutes that triggers "Minor Delays" status (default 3)
 
-Repeat for each commute route you want to track.
+Repeat for each commute route you want to track. You can add the same origin/destination pair more than once with different commute names.
 
 You can update these settings at any time via **Settings → Devices & Services → Irish Rail Commute → Configure**.
 
@@ -83,6 +89,34 @@ For each configured route, the integration creates:
 | `sensor.<name>_countdown` | Human-readable countdown (e.g. "12 min", "Due", "Departed") |
 | `sensor.<name>_train_1` … `_train_N` | Individual sensors for each tracked service |
 | `binary_sensor.<name>_has_disruption` | `on` when the route has delays or cancellations |
+| `sensor.<name>_7_day_reliability` | Percentage of trains on time over the past 7 days |
+
+---
+
+## Status change events
+
+Every time the commute status changes (e.g. Normal → Major Delays), the integration fires a `irish_rail_commute_status_changed` event on the Home Assistant event bus. You can use this in automations to get notified of disruptions.
+
+Event data fields:
+
+| Field | Description |
+|-------|-------------|
+| `commute_name` | Your configured commute name |
+| `new_status` | The new status (e.g. `Major Delays`) |
+| `previous_status` | The status before the change |
+| `origin` / `destination` | Station codes |
+| `origin_name` / `destination_name` | Station names |
+| `entry_id` | Config entry ID (useful when multiple routes are configured) |
+
+### Automation blueprint
+
+A ready-made automation blueprint is included at `blueprints/automation/irish_rail_commute/commute_status_alert.yaml`. To install it in Home Assistant:
+
+1. Copy `blueprints/automation/irish_rail_commute/commute_status_alert.yaml` to your Home Assistant `config/blueprints/automation/irish_rail_commute/` directory.
+2. Go to **Settings → Automations & Scenes → Blueprints** and find **Irish Rail Commute Status Alert**.
+3. Click **Create Automation** and configure your notification service.
+
+Or create the automation manually — listen for the `irish_rail_commute_status_changed` event and call your preferred notify service.
 
 ---
 

@@ -1,0 +1,78 @@
+blueprint:
+  name: Irish Rail Commute Status Alert
+  description: >
+    Send a push notification when your Irish Rail commute status changes
+    (e.g. Normal → Major Delays, or back to Normal). Fires on the
+    `irish_rail_commute_status_changed` event emitted by the Irish Rail
+    Commute integration.
+
+    **Event data available in templates:**
+    - `trigger.event.data.commute_name` — your configured commute name
+    - `trigger.event.data.new_status` — current status
+    - `trigger.event.data.previous_status` — previous status
+    - `trigger.event.data.origin_name` / `destination_name`
+    - `trigger.event.data.entry_id` — config entry ID (useful to filter when multiple routes are configured)
+  domain: automation
+  source_url: https://github.com/jmurphylaois1/irish-rail-commute-ha
+  input:
+    notify_service:
+      name: Notification service
+      description: >
+        The `notify` service to call, e.g. `notify.mobile_app_my_phone`.
+        Find yours at **Developer Tools → Services → notify**.
+      selector:
+        text: {}
+    alert_message:
+      name: Notification message
+      description: >
+        The message body. You can use Jinja2 templates with the event data
+        listed above.
+      default: >
+        {{ trigger.event.data.commute_name }} is now
+        {{ trigger.event.data.new_status }}
+        (was {{ trigger.event.data.previous_status }}).
+      selector:
+        text:
+          multiline: true
+    alert_title:
+      name: Notification title
+      default: "Irish Rail Update"
+      selector:
+        text: {}
+    skip_recovery:
+      name: Skip "back to Normal" notifications
+      description: >
+        When enabled, no notification is sent when the commute returns to
+        Normal service — you only receive alerts for disruptions.
+      default: true
+      selector:
+        boolean:
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: event
+    event_type: irish_rail_commute_status_changed
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.event.data.new_status == 'Normal' }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ not (skip_recovery | bool(true)) }}"
+                sequence:
+                  - service: !input notify_service
+                    data:
+                      title: !input alert_title
+                      message: !input alert_message
+    default:
+      - service: !input notify_service
+        data:
+          title: !input alert_title
+          message: !input alert_message

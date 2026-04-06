@@ -27,6 +27,7 @@ from .const import (
     DEFAULT_MINOR_DELAY_THRESHOLD,
     DEFAULT_SEVERE_DELAY_THRESHOLD,
     DOMAIN,
+    EVENT_STATUS_CHANGED,
     MIN_DELAY_THRESHOLD,
     NIGHT_HOURS,
     PEAK_HOURS,
@@ -39,6 +40,7 @@ from .const import (
     UPDATE_INTERVAL_OFF_PEAK,
     UPDATE_INTERVAL_PEAK,
 )
+from .reliability import ReliabilityTracker
 
 _LOGGER = logging.getLogger(__name__)
 _TIME_FORMAT_RE = re.compile(r"^\d{2}:\d{2}$")
@@ -53,13 +55,17 @@ class IrishRailDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         api: IrishRailAPI,
         config: dict[str, Any],
+        entry_id: str = "",
     ) -> None:
         """Initialize the coordinator."""
         self.api = api
         self.config = config
+        self.entry_id = entry_id
         self._failed_updates = 0
         self._max_failed_updates = 3
         self._update_interval_lock = asyncio.Lock()
+        self._previous_status: str | None = None
+        self.reliability_tracker = ReliabilityTracker(hass, entry_id) if entry_id else None
 
         self.origin = config[CONF_ORIGIN]
         self.destination = config[CONF_DESTINATION]
@@ -1059,6 +1065,27 @@ class IrishRailDataUpdateCoordinator(DataUpdateCoordinator):
         overall_status = self._calculate_overall_status(_status_trains)
         delay_info = self._collect_delay_info(_status_trains)
         summary = self._build_summary(on_time_count, delayed_count, cancelled_count, overall_status)
+
+        # Fire event when overall status changes
+        if self._previous_status is not None and overall_status != self._previous_status:
+            self.hass.bus.async_fire(
+                EVENT_STATUS_CHANGED,
+                {
+                    "entry_id": self.entry_id,
+                    "commute_name": self.config.get("commute_name", ""),
+                    "origin": self.origin,
+                    "destination": self.destination,
+                    "origin_name": self.origin_name or self.origin,
+                    "destination_name": self.destination_name or self.destination,
+                    "previous_status": self._previous_status,
+                    "new_status": overall_status,
+                },
+            )
+        self._previous_status = overall_status
+
+        # Record reliability observations for tracked services
+        if self.reliability_tracker is not None:
+            await self.reliability_tracker.async_record(services)
 
         next_train = None
         for service in upcoming_trains:

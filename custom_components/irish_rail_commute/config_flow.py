@@ -9,21 +9,29 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
+from homeassistant.util import slugify
 
 from .api import IrishRailAPI
 from .const import (
     CONF_COMMUTE_NAME,
     CONF_DESTINATION,
     CONF_DESTINATION_NAME,
+    CONF_MAJOR_DELAY_THRESHOLD,
+    CONF_MINOR_DELAY_THRESHOLD,
     CONF_NIGHT_UPDATES,
     CONF_NUM_SERVICES,
     CONF_ORIGIN,
     CONF_ORIGIN_NAME,
+    CONF_SEVERE_DELAY_THRESHOLD,
     CONF_TIME_WINDOW,
+    DEFAULT_MAJOR_DELAY_THRESHOLD,
+    DEFAULT_MINOR_DELAY_THRESHOLD,
     DEFAULT_NIGHT_UPDATES,
     DEFAULT_NUM_SERVICES,
+    DEFAULT_SEVERE_DELAY_THRESHOLD,
     DEFAULT_TIME_WINDOW,
     DOMAIN,
+    MIN_DELAY_THRESHOLD,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,9 +92,6 @@ class IrishRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if origin == destination:
                 errors["base"] = "same_station"
             else:
-                await self.async_set_unique_id(f"{origin}_{destination}")
-                self._abort_if_unique_id_configured()
-
                 origin_name = self._get_station_name(origin)
                 destination_name = self._get_station_name(destination)
 
@@ -154,14 +159,26 @@ class IrishRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             time_window = int(user_input[CONF_TIME_WINDOW])
             num_services = int(user_input[CONF_NUM_SERVICES])
             night_updates = bool(user_input[CONF_NIGHT_UPDATES])
+            severe_threshold = int(user_input[CONF_SEVERE_DELAY_THRESHOLD])
+            major_threshold = int(user_input[CONF_MAJOR_DELAY_THRESHOLD])
+            minor_threshold = int(user_input[CONF_MINOR_DELAY_THRESHOLD])
+
+            origin = self._route_data[CONF_ORIGIN]
+            destination = self._route_data[CONF_DESTINATION]
 
             if time_window < 1:
                 errors[CONF_TIME_WINDOW] = "invalid_time_window"
             elif num_services < 1:
                 errors[CONF_NUM_SERVICES] = "invalid_num_services"
+            elif not (severe_threshold >= major_threshold >= minor_threshold >= MIN_DELAY_THRESHOLD):
+                errors["base"] = "invalid_delay_thresholds"
             else:
+                unique_id = f"{origin}_{destination}_{slugify(commute_name)}"
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
+
                 return self.async_create_entry(
-                    title=suggested_name,
+                    title=commute_name,
                     data={
                         **self._route_data,
                         CONF_COMMUTE_NAME: commute_name,
@@ -170,6 +187,9 @@ class IrishRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_TIME_WINDOW: time_window,
                         CONF_NUM_SERVICES: num_services,
                         CONF_NIGHT_UPDATES: night_updates,
+                        CONF_SEVERE_DELAY_THRESHOLD: severe_threshold,
+                        CONF_MAJOR_DELAY_THRESHOLD: major_threshold,
+                        CONF_MINOR_DELAY_THRESHOLD: minor_threshold,
                     },
                 )
 
@@ -205,6 +225,39 @@ class IrishRailConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_NIGHT_UPDATES,
                     default=DEFAULT_NIGHT_UPDATES,
                 ): bool,
+                vol.Required(
+                    CONF_SEVERE_DELAY_THRESHOLD,
+                    default=DEFAULT_SEVERE_DELAY_THRESHOLD,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_MAJOR_DELAY_THRESHOLD,
+                    default=DEFAULT_MAJOR_DELAY_THRESHOLD,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_MINOR_DELAY_THRESHOLD,
+                    default=DEFAULT_MINOR_DELAY_THRESHOLD,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
             }
         )
 
@@ -230,16 +283,22 @@ class IrishRailOptionsFlow(config_entries.OptionsFlow):
 
         current_name = self.config_entry.data.get(CONF_COMMUTE_NAME, self.config_entry.title)
         current_time_window = self.config_entry.options.get(
-            CONF_TIME_WINDOW,
-            DEFAULT_TIME_WINDOW,
+            CONF_TIME_WINDOW, DEFAULT_TIME_WINDOW
         )
         current_num_services = self.config_entry.options.get(
-            CONF_NUM_SERVICES,
-            DEFAULT_NUM_SERVICES,
+            CONF_NUM_SERVICES, DEFAULT_NUM_SERVICES
         )
         current_night_updates = self.config_entry.options.get(
-            CONF_NIGHT_UPDATES,
-            DEFAULT_NIGHT_UPDATES,
+            CONF_NIGHT_UPDATES, DEFAULT_NIGHT_UPDATES
+        )
+        current_severe = self.config_entry.options.get(
+            CONF_SEVERE_DELAY_THRESHOLD, DEFAULT_SEVERE_DELAY_THRESHOLD
+        )
+        current_major = self.config_entry.options.get(
+            CONF_MAJOR_DELAY_THRESHOLD, DEFAULT_MAJOR_DELAY_THRESHOLD
+        )
+        current_minor = self.config_entry.options.get(
+            CONF_MINOR_DELAY_THRESHOLD, DEFAULT_MINOR_DELAY_THRESHOLD
         )
 
         if user_input is not None:
@@ -247,11 +306,16 @@ class IrishRailOptionsFlow(config_entries.OptionsFlow):
             time_window = int(user_input[CONF_TIME_WINDOW])
             num_services = int(user_input[CONF_NUM_SERVICES])
             night_updates = bool(user_input[CONF_NIGHT_UPDATES])
+            severe_threshold = int(user_input[CONF_SEVERE_DELAY_THRESHOLD])
+            major_threshold = int(user_input[CONF_MAJOR_DELAY_THRESHOLD])
+            minor_threshold = int(user_input[CONF_MINOR_DELAY_THRESHOLD])
 
             if time_window < 1:
                 errors[CONF_TIME_WINDOW] = "invalid_time_window"
             elif num_services < 1:
                 errors[CONF_NUM_SERVICES] = "invalid_num_services"
+            elif not (severe_threshold >= major_threshold >= minor_threshold >= MIN_DELAY_THRESHOLD):
+                errors["base"] = "invalid_delay_thresholds"
             else:
                 new_data = {
                     **self.config_entry.data,
@@ -269,6 +333,9 @@ class IrishRailOptionsFlow(config_entries.OptionsFlow):
                         CONF_TIME_WINDOW: time_window,
                         CONF_NUM_SERVICES: num_services,
                         CONF_NIGHT_UPDATES: night_updates,
+                        CONF_SEVERE_DELAY_THRESHOLD: severe_threshold,
+                        CONF_MAJOR_DELAY_THRESHOLD: major_threshold,
+                        CONF_MINOR_DELAY_THRESHOLD: minor_threshold,
                     },
                 )
 
@@ -304,6 +371,39 @@ class IrishRailOptionsFlow(config_entries.OptionsFlow):
                     CONF_NIGHT_UPDATES,
                     default=current_night_updates,
                 ): bool,
+                vol.Required(
+                    CONF_SEVERE_DELAY_THRESHOLD,
+                    default=current_severe,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_MAJOR_DELAY_THRESHOLD,
+                    default=current_major,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_MINOR_DELAY_THRESHOLD,
+                    default=current_minor,
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DELAY_THRESHOLD,
+                        max=120,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
             }
         )
 

@@ -63,6 +63,11 @@ UPDATE_INTERVAL_OFF_PEAK: Final = timedelta(minutes=5)
 UPDATE_INTERVAL_PEAK: Final = timedelta(minutes=2)
 
 # ---------------------------
+# Events
+# ---------------------------
+EVENT_STATUS_CHANGED: Final = f"{DOMAIN}_status_changed"
+
+# ---------------------------
 # Flags / favourites storage
 # ---------------------------
 EVENT_FLAGS_UPDATED: Final = f"{DOMAIN}_flags_updated"

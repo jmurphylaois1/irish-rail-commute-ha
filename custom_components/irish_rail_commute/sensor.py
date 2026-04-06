@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -129,6 +129,7 @@ async def async_setup_entry(
         CommuteStatusSensor(coordinator, entry),
         NextTrainSensor(coordinator, entry),
         CountdownSensor(coordinator, entry),
+        ReliabilitySensor(coordinator, entry),
     ]
 
     for i in range(1, num_trains + 1):
@@ -624,3 +625,44 @@ class TrainSensor(BaseEntity):
             "operator": train.get("operator"),
             **self._base_data_age_attributes(data),
         }
+
+
+class ReliabilitySensor(BaseEntity):
+    """Rolling 7-day on-time reliability sensor."""
+
+    _attr_icon = "mdi:chart-line"
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 1
+
+    def __init__(
+        self,
+        coordinator: IrishRailDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_name = "7-Day Reliability"
+        self._attr_unique_id = f"{entry.entry_id}_reliability"
+
+    @property
+    def native_value(self) -> float | None:
+        tracker = getattr(self.coordinator, "reliability_tracker", None)
+        if tracker is None:
+            return None
+        return tracker.reliability_percent
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        data = self.coordinator.data or {}
+        tracker = getattr(self.coordinator, "reliability_tracker", None)
+        attrs: dict[str, Any] = {"window_days": 7}
+
+        if tracker is not None:
+            on_time = tracker.on_time_count
+            total = tracker.total_observations
+            attrs["total_observations"] = total
+            attrs["on_time_count"] = on_time
+            attrs["delayed_or_cancelled_count"] = total - on_time
+
+        attrs.update(self._base_data_age_attributes(data))
+        return attrs

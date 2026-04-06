@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         **entry.options,
     }
 
-    coordinator = IrishRailDataUpdateCoordinator(hass, api, config)
+    coordinator = IrishRailDataUpdateCoordinator(hass, api, config, entry_id=entry.entry_id)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = {
